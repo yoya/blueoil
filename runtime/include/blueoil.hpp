@@ -34,6 +34,7 @@ public:
   Tensor(const Tensor &tensor);
   std::vector<int> shape() const;
   std::vector<float> & data();
+  const std::vector<float> & data() const;
   const float *dataAsArray() const;
   const float *dataAsArray(std::vector<int> indices) const;
   float *dataAsArray();
@@ -48,6 +49,39 @@ public:
   // rtol: relative tolerance parameter
   // atol: absolute tolerance parameter
   bool allclose(const Tensor &tensor, float rtol, float atol) const;
+};
+
+template <class T>
+class TensorT {
+  template<class> friend class TensorT;
+  friend class Tensor;
+private:
+  std::vector<int> shape_;
+  std::vector<T> data_;
+  int shapeVolume();
+public:
+  TensorT(std::vector<int> shape);
+  TensorT(std::vector<int> shape, std::vector<T> data);
+  TensorT(std::vector<int> shape, T *data);
+  TensorT(const TensorT<T> &tensor);
+  TensorT(const Tensor &tensor);
+  Tensor Tensor();
+  std::vector<int> shape() const;
+  std::vector<T> & data();
+  const T *dataAsArray() const;
+  T *dataAsArray();
+  const T *dataAsArray(std::vector<int> indices) const;
+  T *dataAsArray(std::vector<int> indices);
+  void dump() const;
+  typename std::vector<T>::const_iterator begin() const;
+  typename std::vector<T>::const_iterator end() const;
+  typename std::vector<T>::iterator begin();
+  typename std::vector<T>::iterator end();
+  bool allequal(const TensorT<T> &tensor) const;
+  bool allclose(const TensorT<T> &tensor) const;
+  // rtol: relative tolerance parameter
+  // atol: absolute tolerance parameter
+  bool allclose(const TensorT<T> &tensor, float rtol, float atol) const;
 };
 
 

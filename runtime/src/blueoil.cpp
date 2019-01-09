@@ -55,6 +55,10 @@ std::vector<float> &Tensor::data() {
   return data_;
 }
 
+const std::vector<float> &Tensor::data() const {
+  return data_;
+}
+
 const float *Tensor::dataAsArray() const {
   if (shape_.size() == 0) {
     throw std::invalid_argument("Tensor have no shape");
@@ -204,6 +208,82 @@ bool Tensor::allclose(const Tensor &tensor, float rtol, float atol) const {
   return true;
 }
 
+/**/
+template <class T>
+TensorT<T>::TensorT(const class Tensor &tensor)
+  : shape_(tensor.shape()),
+    data_(std::vector<T>(calcVolume(std::move(tensor.shape())), 0)) {
+  int n = tensor.data().size();
+  for (int i = 0 ; i < n ; i++) {
+    data_[i] = static_cast<T>(tensor.data()[i]);
+  }
+}
+
+template <class T>
+Tensor TensorT<T>::Tensor() {
+  class Tensor t(shape());
+  int n = data().size();
+  for (int i = 0 ; i < n ; i++) {
+    t.data()[i] = static_cast<float>(data()[i]);
+  }
+  return t;
+}
+
+template <class T>
+const T *TensorT<T>::dataAsArray() const {
+  if (shape_.size() == 0) {
+    throw std::invalid_argument("Tensor have no shape");
+  }
+  return data_.data();
+}
+
+template <class T>
+const T *TensorT<T>::dataAsArray(std::vector<int> indices) const {
+  if (shape_.size() != indices.size() ) {
+    throw std::invalid_argument("shape.size != indices.size");
+  }
+  int i = 0;
+  for (auto itr = indices.begin(); itr != indices.end(); ++itr, ++i) {
+    if ((*itr < 0) || (shape_[i] <= *itr)) {
+      throw std::invalid_argument("indices out of shape range");
+    }
+  }
+  int offset = 0, size = data_.size();
+  i = 0;
+  for (auto itr = indices.begin(); itr != indices.end(); ++itr, ++i) {
+    size /= shape_[i];
+    offset += (*itr) * size;
+  }
+  return data_.data() + offset;
+}
+
+template <class T>
+T *TensorT<T>::dataAsArray() {
+  if (shape_.size() == 0) {
+    throw std::invalid_argument("Tensor have no shape");
+  }
+  return data_.data();
+}
+
+template <class T>
+T *TensorT<T>::dataAsArray(std::vector<int> indices) {
+  if (shape_.size() != indices.size() ) {
+    throw std::invalid_argument("shape.size != indices.size");
+  }
+  int i = 0;
+  for (auto itr = indices.begin(); itr != indices.end(); ++itr, ++i) {
+    if ((*itr < 0) || (shape_[i] <= *itr)) {
+      throw std::invalid_argument("indices out of shape range");
+    }
+  }
+  int offset = 0, size = data_.size();
+  i = 0;
+  for (auto itr = indices.begin(); itr != indices.end(); ++itr, ++i) {
+    size /= shape_[i];
+    offset += (*itr) * size;
+  }
+  return data_.data() + offset;
+}
 
 // mapping process node to functions vector.
 void MappingProcess(const YAML::Node processors_node, std::vector<Processor>* functions) {
