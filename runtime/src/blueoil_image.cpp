@@ -5,6 +5,7 @@
 #include "blueoil.hpp"
 #include "blueoil_image.hpp"
 
+
 namespace blueoil {
 namespace image {
 
@@ -43,7 +44,8 @@ TensorT<T> ResizeHorizontal_NearestNeighbor(const TensorT<T> &tensor, const int 
       }
     }
   }
-  return TensorT<T>::Tensor(dstTensor);
+  //return TensorT<T>::Tensor(dstTensor);
+  return dstTensor;
 }
 
 template <class T>
@@ -60,13 +62,14 @@ TensorT<T> ResizeVertical_NearestNeighbor(const TensorT<T> &tensor, const int he
       int srcX = dstX;
       int srcY = (int) std::floor(dstY/yScale);
       for (int c = 0 ; c < channels ; c++) {
-        const uint8_t *srcRGB = tensor.dataAsArray({srcY, srcX, 0});
-        uint8_t *dstRGB = dstTensor.dataAsArray({dstY, dstX, 0});
+        const auto *srcRGB = tensor.dataAsArray({srcY, srcX, 0});
+        auto *dstRGB = dstTensor.dataAsArray({dstY, dstX, 0});
         dstRGB[c] = srcRGB[c];
       }
     }
   }
-  return TensorT<T>::Tensor(dstTensor);
+  return dstTensor;
+  // return TensorT<T>::Tensor(dstTensor);
 }
 
 /*
@@ -92,18 +95,19 @@ TensorT<T> ResizeHorizontal_BiLinear(const TensorT<T> &tensor, const int width) 
         int totalW = 0.0;
         for (int x = -xSrcWindow ; x < xSrcWindow; x++){
           int srcX2 = clamp(srcX + x, 0, srcWidth - 1);
-          const uint8_t *srcRGB = tensor.dataAsArray({srcY, srcX2, 0});
+          const auto *srcRGB = tensor.dataAsArray({srcY, srcX2, 0});
           float d = std::abs(static_cast<float>(x) / static_cast<float> (xSrcWindow));
           float w = 1.0 - d; // Bi-Linear
           v += w * srcRGB[c];
           totalW += w;
         }
-        uint8_t *dstRGB = dstTensor.dataAsArray({dstY, dstX, 0});
+        auto *dstRGB = dstTensor.dataAsArray({dstY, dstX, 0});
         dstRGB[c] = v / totalW;
       }
     }
   }
-  return TensorT<T>::Tensor(dstTensor);
+  return dstTensor;
+  // return TensorT<T>::Tensor(dstTensor);
 }
 
 template <class T>
@@ -126,13 +130,13 @@ TensorT<T> ResizeVertical_BiLinear(const TensorT<T> &tensor, const int height) {
         int totalW = 0.0;
         for (int y = -ySrcWindow ; y < ySrcWindow ; y++) {
           int srcY2 = clamp(srcY + y, 0, srcHeight - 1);
-          const uint8_t *srcRGB = tensor.dataAsArray({srcY2, srcX, 0});
+          const auto *srcRGB = tensor.dataAsArray({srcY2, srcX, 0});
           float d = std::abs(static_cast<float>(y) / static_cast<float> (ySrcWindow));
           float w = 1.0 - d; // Bi-Linear
           v += w * srcRGB[c];
           totalW += w;
         }
-        uint8_t *dstRGB = dstTensor.dataAsArray({dstY, dstX, 0});
+        auto *dstRGB = dstTensor.dataAsArray({dstY, dstX, 0});
         dstRGB[c] = v / totalW;
       }
     }
@@ -149,21 +153,33 @@ Tensor Resize(const Tensor& image, const int width, const int height,
   assert((filter == RESIZE_FILTER_NEAREST_NEIGHBOR) || (channels == RESIZE_FILTER_BI_LINEAR));
   const int srcHeight = shape[0];
   const int srcWidth  = shape[1];
-  TensorT<uint8_t> dstImage = image;
+  int tmpImageDataSize = image.data().size();
+  std::vector<uint8_t> tmpImageData(tmpImageDataSize);
+  for (int i = 0 ; i < tmpImageDataSize ; i++) {
+    tmpImageData[i] = static_cast<uint8_t>(image.data()[i]);
+  }
+  TensorT<uint8_t> tmpImage(image.shape(), tmpImageData.data());
   if  (srcWidth != width) {
     if (filter == RESIZE_FILTER_NEAREST_NEIGHBOR) {
-      dstImage = ResizeHorizontal_NearestNeighbor(dstImage, width);
+      tmpImage = ResizeHorizontal_NearestNeighbor(tmpImage, width);
     } else {  // RESIZE_FILTER_BI_LINEAR
-      dstImage = ResizeHorizontal_BiLinear(dstImage, width);
+      tmpImage = ResizeHorizontal_BiLinear(tmpImage, width);
     }
   }
   if  (srcHeight != height) {
     if (filter == RESIZE_FILTER_NEAREST_NEIGHBOR) {
-      dstImage = ResizeVertical_NearestNeighbor(dstImage, height);
+      tmpImage = ResizeVertical_NearestNeighbor(tmpImage, height);
     } else {  // RESIZE_FILTER_BI_LINEAR
-      dstImage = ResizeVertical_BiLinear(dstImage, height);
+      tmpImage = ResizeVertical_BiLinear(tmpImage, height);
     }
   }
+  //
+  int dstImageDataSize = tmpImage.data().size();
+  std::vector<float> dstImageData(dstImageDataSize);
+  for (int i = 0 ; i < dstImageDataSize ; i++) {
+    dstImageData[i] = static_cast<float>(tmpImage.data()[i]);
+  }
+  Tensor dstImage(tmpImage.shape(), dstImageData.data());
   return dstImage;
 }   
 
