@@ -160,12 +160,13 @@ Tensor Resize(const Tensor& image, const int width, const int height,
   assert((filter == RESIZE_FILTER_NEAREST_NEIGHBOR) || (channels == RESIZE_FILTER_BI_LINEAR));
   const int srcHeight = shape[0];
   const int srcWidth  = shape[1];
-  int tmpImageDataSize = image.data().size();
-  std::vector<uint8_t> tmpImageData(tmpImageDataSize);
+  TensorT<uint8_t> tmpImage(image.shape());
+  int tmpImageDataSize = tmpImage.data().size();
+  float *srcData = const_cast<float *>(image.dataAsArray());
+  uint8_t *tmpData = tmpImage.dataAsArray();
   for (int i = 0 ; i < tmpImageDataSize ; i++) {
-    tmpImageData[i] = static_cast<uint8_t>(image.data()[i]);
+    *tmpData++ = static_cast<uint8_t>(*srcData++);
   }
-  TensorT<uint8_t> tmpImage(image.shape(), tmpImageData.data());
   if  (srcWidth != width) {
     if (filter == RESIZE_FILTER_NEAREST_NEIGHBOR) {
       tmpImage = ResizeHorizontal_NearestNeighbor(tmpImage, width);
@@ -181,12 +182,13 @@ Tensor Resize(const Tensor& image, const int width, const int height,
     }
   }
   //
-  int dstImageDataSize = tmpImage.data().size();
-  std::vector<float> dstImageData(dstImageDataSize);
+  Tensor dstImage(tmpImage.shape());
+  int dstImageDataSize = dstImage.data().size();
+  tmpData = tmpImage.dataAsArray();
+  float *dstData = dstImage.dataAsArray();
   for (int i = 0 ; i < dstImageDataSize ; i++) {
-    dstImageData[i] = static_cast<float>(tmpImage.data()[i]);
+    *dstData++ = static_cast<float>(*tmpData++);
   }
-  Tensor dstImage(tmpImage.shape(), dstImageData.data());
   return dstImage;
 }   
 
