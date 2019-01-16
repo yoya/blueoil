@@ -32,17 +32,22 @@ TensorT<T> ResizeHorizontal_NearestNeighbor(const TensorT<T> &tensor, const int 
   const int channels  = shape[2];
   const int height = srcHeight;
   TensorT<T> dstTensor({height, width, channels});
+  int srcRGBlinesize = srcWidth * channels;
   float xScale = static_cast<float>(width) / static_cast<float>(srcWidth);
+  float srcRGBscaled = 1.0f / xScale;
+  const T *srcImageData = tensor.dataAsArray();
+  T *srcRGBline = const_cast<T *>(srcImageData);
+  T *dstRGB = dstTensor.dataAsArray();
   for (int dstY = 0 ; dstY < height ; dstY++) {
+    float srcRGBindexF = 0;
     for (int dstX = 0 ; dstX < width ; dstX++) {
-      int srcX = (int) std::floor(dstX/xScale);
-      int srcY = dstY;
+      T *srcRGB = srcRGBline + (static_cast<int>(srcRGBindexF) * channels);
       for (int c = 0 ; c < channels ; c++) {
-        const uint8_t *srcRGB = tensor.dataAsArray({srcY, srcX, 0});
-        uint8_t *dstRGB = dstTensor.dataAsArray({dstY, dstX, 0});
-        dstRGB[c] = srcRGB[c];
+        *dstRGB++ = *srcRGB++;
       }
+      srcRGBindexF += srcRGBscaled;
     }
+    srcRGBline += srcRGBlinesize;
   }
   //return TensorT<T>::Tensor(dstTensor);
   return dstTensor;
@@ -56,17 +61,19 @@ TensorT<T> ResizeVertical_NearestNeighbor(const TensorT<T> &tensor, const int he
   const int channels  = shape[2];
   const int width = srcWidth;
   TensorT<T> dstTensor({height, width, channels});
+  const int srcScanLineSize = width * channels;
   float yScale = static_cast<float> (height) / static_cast<float>(srcHeight);
+  float srcRGBscaled = 1.0f / yScale;
+  const T *srcImageData = tensor.dataAsArray();
+  T *srcRGBbase = const_cast<T *>(srcImageData);
+  T *dstRGB = dstTensor.dataAsArray();
+  float srcRGBindexF = 0;
   for (int dstY = 0 ; dstY < height ; dstY++) {
-    for (int dstX = 0 ; dstX < width ; dstX++) {
-      int srcX = dstX;
-      int srcY = (int) std::floor(dstY/yScale);
-      for (int c = 0 ; c < channels ; c++) {
-        const auto *srcRGB = tensor.dataAsArray({srcY, srcX, 0});
-        auto *dstRGB = dstTensor.dataAsArray({dstY, dstX, 0});
-        dstRGB[c] = srcRGB[c];
-      }
+    T *srcRGB = srcRGBbase + (static_cast<int>(srcRGBindexF) * srcScanLineSize);
+    for (int i = 0 ; i < srcScanLineSize ; i++) {
+      *dstRGB++ = *srcRGB++;
     }
+    srcRGBindexF += srcRGBscaled;
   }
   return dstTensor;
   // return TensorT<T>::Tensor(dstTensor);
