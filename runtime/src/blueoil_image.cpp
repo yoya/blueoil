@@ -49,7 +49,6 @@ TensorT<T> ResizeHorizontal_NearestNeighbor(const TensorT<T> &tensor, const int 
     }
     srcRGBline += srcRGBlinesize;
   }
-  //return TensorT<T>::Tensor(dstTensor);
   return dstTensor;
 }
 
@@ -76,7 +75,6 @@ TensorT<T> ResizeVertical_NearestNeighbor(const TensorT<T> &tensor, const int he
     srcRGBindexF += srcRGBscaled;
   }
   return dstTensor;
-  // return TensorT<T>::Tensor(dstTensor);
 }
 
 /*
@@ -114,7 +112,6 @@ TensorT<T> ResizeHorizontal_BiLinear(const TensorT<T> &tensor, const int width) 
     }
   }
   return dstTensor;
-  // return TensorT<T>::Tensor(dstTensor);
 }
 
 template <class T>
@@ -206,7 +203,7 @@ Tensor Resize(const Tensor& image, const int width, const int height,
     *dstData++ = static_cast<float>(*tmpData++);
   }
   return dstImage;
-}   
+}
 
 void dummy_TensorT_template_extract(void) {
   TensorT<float> dummyImage({4, 4, 3});
