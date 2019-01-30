@@ -85,6 +85,11 @@ TensorT<T>::TensorT(std::vector<int> shape, T *arr)
                          arr + calcVolume(std::move(shape)))) {
 }
 
+template <class T>
+TensorT<T>::TensorT(const TensorT<T> &tensor)
+  : shape_(tensor.shape_),
+    data_(tensor.data_) {
+}
 
 template <class T>
 std::vector<int> TensorT<T>::shape() const {

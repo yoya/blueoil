@@ -13,6 +13,9 @@ enum ResizeFilter {
 
 Tensor Resize(const Tensor& image, const int width, const int height,
               const enum ResizeFilter filter);
+template <class T> TensorT<T> ResizeT(const TensorT<T>& image,
+                                      const int width, const int height,
+                                      const enum ResizeFilter filter);
 
 } // namespace image
 } // namespace blueoil
