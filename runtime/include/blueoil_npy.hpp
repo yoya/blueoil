@@ -23,6 +23,7 @@ namespace blueoil {
 namespace npy {
 
 Tensor Tensor_fromNPYFile(const std::string filename);
+void Tensor_toNPYFile(const std::string filename, const Tensor &tensor);
 
 }  // namespace npy
 }  // namespace blueoil

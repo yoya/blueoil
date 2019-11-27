@@ -40,7 +40,11 @@ struct NPYheader_t {
 struct NPYheader_t readNPYheader(std::ifstream &fin);
 template<typename T>
 void readNPYdata(std::ifstream &fin, const struct NPYheader_t &nh,
-                  T *imagedata);
+                  T *data);
+void writeNPYheader(std::ofstream &fout, const struct NPYheader_t &nh);
+template<typename T>
+void writeNPYdata(std::ofstream &fout, const struct NPYheader_t &nh,
+                  T *data);
 
 Tensor Tensor_fromNPYFile(const std::string filename) {
   std::ifstream fin(filename, std::ios::in | std::ios::binary);
@@ -55,6 +59,18 @@ Tensor Tensor_fromNPYFile(const std::string filename) {
   readNPYdata(fin, nh, tensor.dataAsArray());
   return tensor;
 }
+
+
+void Tensor_toNPYFile(const std::string filename, const Tensor &tensor) {
+  std::ofstream fout(filename, std::ios::out | std::ios::trunc | std::ios::binary);
+  if (!fout) {
+    throw std::runtime_error("Can't open file:" +filename);
+  }
+  NPYheader_t nh{tensor.shape(), "<f4"};  // float32
+  writeNPYheader(fout, nh);
+  writeNPYdata(fout, nh, tensor.dataAsArray());
+}
+
 
 // " ABC " => "ABC"
 static std::string trim(const std::string str) {
@@ -146,6 +162,8 @@ std::map<std::string, std::string> parseJson(std::string jsondata) {
   }
   return jsonMap;
 }
+#define NPY_FILE_SIG "\x93NUMPY"
+#define NPY_FILE_SIG_LEN 6
 
 struct NPYheader_t readNPYheader(std::ifstream &fin) {
   char sig[6];
@@ -154,7 +172,7 @@ struct NPYheader_t readNPYheader(std::ifstream &fin) {
   std::stringstream ss;
   NPYheader_t header;
   fin.read(sig, 6);
-  if (std::memcmp(sig, "\x93NUMPY", 6) != 0) {
+  if (std::memcmp(sig, NPY_FILE_SIG, NPY_FILE_SIG_LEN) != 0) {
     ss << "wrong npy signature:" << sig;
     throw std::runtime_error(ss.str());
   }
@@ -233,6 +251,61 @@ void readNPYdata(std::ifstream &fin, const struct NPYheader_t &nh,
         throw std::runtime_error("incompleted rgb-data");
       }
       data[i] = *(reinterpret_cast<float*>(fvalue_char));
+    }
+  } else {
+    throw std::runtime_error("unsupported type:"+nh.datatype);
+  }
+}
+
+void writeNPYheader(std::ofstream &fout, const struct NPYheader_t &nh) {
+  std::stringstream jsonss;
+  fout << NPY_FILE_SIG;
+  // version: 1 (little-endian)
+  fout.write(reinterpret_cast<const char *>("\1\0"), 2);
+  jsonss << "{'descr': '";
+  if ((nh.datatype != "|u1") && (nh.datatype != "<f4")) {
+    throw std::runtime_error("datatype(descr):" + nh.datatype + ", must be |u1 or <f4");;
+  }
+  jsonss << nh.datatype;
+  jsonss << "', 'fortran_order': False, 'shape': (";
+  for (auto itr = nh.shape.begin(); itr != nh.shape.end(); ++itr) {
+    if (itr != nh.shape.begin()) {
+      jsonss << ", ";
+    }
+    jsonss << *itr;
+  }
+  jsonss << "), }";
+  jsonss.seekg(0, std::ios::end);
+  uint16_t jsonlen = jsonss.tellg();
+  for (int i = 10 + jsonlen; i < 0x80 ; i++) {
+    jsonss << " ";
+  }
+  jsonss.seekg(0, std::ios::end);
+  jsonlen = jsonss.tellg();
+  fout.write(reinterpret_cast<char *>(&jsonlen), sizeof(uint16_t));
+  fout << jsonss.str();
+}
+
+template<typename T>
+void writeNPYdata(std::ofstream &fout, const struct NPYheader_t &nh,
+                       T *data) {
+  if (data == NULL) {
+    throw std::runtime_error("data == NULL");
+  }
+    if ((nh.datatype != "|u1") && (nh.datatype != "<f4")) {
+      throw std::runtime_error("datatype(descr):" + nh.datatype + ", must be |u1 or <f4");
+  }
+  int n = std::accumulate(nh.shape.begin(), nh.shape.end(), 1, std::multiplies<\
+int>());
+  if (nh.datatype == "|u1") {
+    for (int i = 0; i < n; ++i) {
+      fout.put(data[i]);
+    }
+  } else if (nh.datatype == "<f4") {
+    char fvalue_char[4];
+    for (int i = 0; i < n; ++i) {
+      *(reinterpret_cast<float*>(fvalue_char)) = data[i];
+      fout.write(fvalue_char, 4);
     }
   } else {
     throw std::runtime_error("unsupported type:"+nh.datatype);
