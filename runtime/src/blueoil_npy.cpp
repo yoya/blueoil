@@ -48,10 +48,8 @@ void writeNPYdata(std::ofstream &fout, const struct NPYheader_t &nh,
 
 Tensor Tensor_fromNPYFile(const std::string filename) {
   std::ifstream fin(filename, std::ios::in | std::ios::binary);
-  std::stringstream ss;
   if (!fin) {
-    ss << "Can't open file:" << filename;
-    throw std::runtime_error(ss.str());
+    throw std::runtime_error("Can't open file:"+filename);
   }
   NPYheader_t nh = readNPYheader(fin);
 
@@ -169,12 +167,10 @@ struct NPYheader_t readNPYheader(std::ifstream &fin) {
   char sig[6];
   uint16_t ver;
   uint16_t jsonlen;
-  std::stringstream ss;
   NPYheader_t header;
   fin.read(sig, 6);
   if (std::memcmp(sig, NPY_FILE_SIG, NPY_FILE_SIG_LEN) != 0) {
-    ss << "wrong npy signature:" << sig;
-    throw std::runtime_error(ss.str());
+    throw std::runtime_error("wrong npy signature:"+(std::string)sig);
   }
   fin.read(reinterpret_cast<char *>(&ver), sizeof(uint16_t));
   fin.read(reinterpret_cast<char *>(&jsonlen), sizeof(uint16_t));
@@ -184,13 +180,11 @@ struct NPYheader_t readNPYheader(std::ifstream &fin) {
     jsonlen = (jsonlen << 8) | (jsonlen >> 8);
   }
   if (0x80 < (0x0a + jsonlen)) {
-    ss << "too long json length:" << jsonlen;
-    throw std::runtime_error(ss.str());
+    throw std::runtime_error("too long json length:"+jsonlen);
   }
   std::string jsondata(jsonlen, '\0');
   if (!fin.read(reinterpret_cast<char *>(&(jsondata[0])), jsonlen)) {
-    ss << "too short file for jsonlen:" << jsonlen;
-    throw std::runtime_error(ss.str());
+    throw std::runtime_error("too short file for jsonlen:"+jsonlen);
   }
   // std::cerr << jsondata << std::endl;
   // {'descr': '|u1', 'fortran_order': False, 'shape': (46, 70, 3), }
@@ -199,8 +193,7 @@ struct NPYheader_t readNPYheader(std::ifstream &fin) {
     std::string key = itr->first, value = itr->second;
     if (key == "descr") {
       if ((value != "|u1") && (value != "<f4")) {
-        ss << "descr:" << value << ", must be |u1 or <f4";
-        throw std::runtime_error(ss.str());
+        throw std::runtime_error("descr:"+value+", must be |u1 or <f4");
       }
       header.datatype = value;
     } else if (key =="fortran_order") {
@@ -211,8 +204,7 @@ struct NPYheader_t readNPYheader(std::ifstream &fin) {
       value = extractInner(value, "(", ")");
       std::vector<std::string> numstrList = jsonCommaSplit(value);
       if (numstrList.size() != 3) {
-        ss << "Wrong shape size:" << numstrList.size();
-        throw std::runtime_error(ss.str());
+        throw std::runtime_error("Wrong shape size:"+numstrList.size());
       }
       std::vector<int> shape(numstrList.size());
       for (size_t i = 0 ; i < numstrList.size() ; i++) {
@@ -220,8 +212,7 @@ struct NPYheader_t readNPYheader(std::ifstream &fin) {
       }
       header.shape = shape;
     } else {
-      ss << "Unknown json key:" << key;
-      throw std::runtime_error(ss.str());
+      throw std::runtime_error("Unknown json key:"+key);
     }
   }
   return header;

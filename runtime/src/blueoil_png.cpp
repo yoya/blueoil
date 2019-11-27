@@ -16,7 +16,6 @@ limitations under the License.
 #include <png.h>
 #include <cassert>
 #include <string>
-#include <sstream>
 #include "blueoil.hpp"
 #include "blueoil_png.hpp"
 
@@ -25,13 +24,11 @@ namespace blueoil {
 namespace png {
 
 Tensor Tensor_fromPNGFile(const std::string filename) {
-  std::stringstream ss;
   png_uint_32 png_width, png_height;
   int bpp, color_type, interlace_method;
   FILE *fp = fopen(filename.c_str(), "rb");
   if (!fp) {
-    ss << "can't open file::" << filename;
-    throw std::runtime_error(ss.str());
+    throw std::runtime_error("can't open file::"+filename);
   }
   png_structp png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING,
                                                NULL, NULL, NULL);
