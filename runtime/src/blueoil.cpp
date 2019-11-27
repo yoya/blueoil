@@ -169,7 +169,7 @@ static void Tensor_data_dump(const float *data, const std::vector<int>& shape) {
     int w = *itr;
     int c = *(itr+1);
     for (int x = 0; x < w; x++) {
-      for (int i = 0 ; i < c ; i++) {
+      for (int i = 0; i < c; i++) {
         std::cout << data[c*x + i] << " ";
       }
       std::cout << std::endl;
