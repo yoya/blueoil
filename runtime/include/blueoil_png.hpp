@@ -23,6 +23,7 @@ namespace blueoil {
 namespace png {
 
 Tensor Tensor_fromPNGFile(const std::string filename);
+void Tensor_toPNGFile(const std::string filename,  const Tensor &tensor);
 
 }  // namespace png
 }  // namespace blueoil

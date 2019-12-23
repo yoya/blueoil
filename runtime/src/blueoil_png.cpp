@@ -86,5 +86,42 @@ Tensor Tensor_fromPNGFile(const std::string filename) {
   return tensor;
 }
 
+void Tensor_toPNGFile(const std::string filename,  const Tensor &tensor) {
+  auto shape = tensor.shape();
+  const int height   = shape[0];
+  const int width    = shape[1];
+  const int channels = shape[2];
+  assert(channels == 3);
+  FILE *fp = fopen(filename.c_str(), "wb");
+  if (!fp) {
+    throw std::runtime_error("can't open/create file::"+filename);
+  }
+  png_structp png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING,
+                                                NULL, NULL, NULL);
+  if (!png_ptr) {
+    fclose(fp);
+    throw std::runtime_error("failed to png_create_read_struct");
+  }
+  png_infop png_info_ptr = png_create_info_struct(png_ptr);
+  if (!png_info_ptr) {
+    png_destroy_read_struct(&png_ptr, NULL, NULL);
+    fclose(fp);
+    throw std::runtime_error("failed to png_create_info_struct");
+  }
+  png_init_io(png_ptr, fp);
+  png_bytep image_row = (png_bytep) malloc(3 * width * height);
+  for (int y = 0; y < height; y++) {
+    const float *tensor_row = tensor.dataAsArray({y, 0, 0});
+    for (png_uint_32 i = 0; i < 3 * static_cast<png_uint_32>(width); i++) {
+      image_row[i] = tensor_row[i];
+    }
+    png_write_row(png_ptr, image_row);
+  }
+  // terminate
+  free(image_row);
+  fclose(fp);
+  png_destroy_write_struct(&png_ptr, &png_info_ptr);
+}
+
 }  // namespace png
 }  // namespace blueoil
